@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr">
+  <head>
+    <meta charset="utf-8">
+    <title></title>
+  </head>
+  <body>
+    <input id="username"><button id="go">Find</button>
+    <div id="usersContainer"></div>
+    <div id="container"></div>
+    <div id="repoContainer"></div>
+
+    <script>
+      let username;
+      let options = {
+        headers: {
+          Accept: "application/vnd.github.v3+json",
+        },
+      };
+
+      selectFolder = (evt) => {
+        evt.preventDefault();
+        let repoName = evt.target.getAttribute("data-repo");
+        console.log(evt.target.textContent);
+      };
+
+      selectRepo = (evt) => {
+        document.getElementById("repoContainer").innerHTML = "";
+        let repoName = evt.target.getAttribute("data-repo");
+        let path = evt.target.getAttribute("data-path")
+          ? "/" + evt.target.getAttribute("data-path")
+          : "";
+        if (path != "") {
+          let lio = path.lastIndexOf("/");
+          let backPath = lio == 0 ? "" : path.slice(0, lio);
+          let backlink = document.createElement("a");
+          backlink.appendChild(document.createTextNode("<BACK"));
+          backlink.setAttribute("href", "#");
+          backlink.setAttribute("data-repo", repoName);
+          backlink.setAttribute("data-path", backPath);
+          backlink.addEventListener("click", selectRepo);
+          document.getElementById("repoContainer").appendChild(backlink);
+        }
+        fetch(
+          "https://api.github.com/repos/" +
+            username +
+            "/" +
+            repoName +
+            "/contents" +
+            path,
+          options
+        ).then((response) => {
+          response.json().then((data) => {
+            console.log(data);
+            data.forEach((entry) => {
+              if (entry.name.includes(".html")) {
+                let link = document.createElement("a");
+                let fileIcon = document.createElement("i");
+                fileIcon.className = "fas fa-file-code";
+                link.appendChild(fileIcon);
+                link.appendChild(document.createTextNode(" " + entry.name));
+                link.setAttribute(
+                  "href",
+                  "https://" +
+                    username +
+                    ".github.io/" +
+                    repoName +
+                    "/" +
+                    entry.path
+                );
+                //link.setAttribute("target", "_blank");
+                document.getElementById("repoContainer").appendChild(link);
+              } else if (!entry.name.includes(".")) {
+                let link = document.createElement("a");
+                let folderIcon = document.createElement("i");
+                folderIcon.className = "fas fa-folder";
+                link.appendChild(folderIcon);
+                link.appendChild(document.createTextNode(" " + entry.name));
+                link.setAttribute("href", "#");
+                link.setAttribute("data-repo", repoName);
+                link.setAttribute("data-path", entry.path);
+                link.addEventListener("click", selectRepo);
+                document.getElementById("repoContainer").appendChild(link);
+              } else {
+                let listing = document.createElement("span");
+                listing.appendChild(document.createTextNode(entry.name));
+                document.getElementById("repoContainer").appendChild(listing);
+              }
+            });
+          });
+        });
+      };
+
+      selectUser = (evt) => {
+        username = document.getElementById("username").value;
+
+        fetch(
+          "https://api.github.com/users/" + username + "/repos",
+          options
+        ).then((response) => {
+          document.getElementById("container").innerHTML = "";
+          response.json().then((data) => {
+            console.log(data);
+            data.forEach((repo) => {
+              let cont = document.createElement("div");
+              cont.className = "repoLabel";
+              let name = document.createTextNode(repo.name + ": ");
+              cont.appendChild(name);
+              let button = document.createElement("button");
+              button.setAttribute("data-repo", repo.name);
+              button.appendChild(document.createTextNode("View"));
+              button.addEventListener("click", selectRepo);
+              cont.appendChild(button);
+              let container = document.getElementById("container");
+              container.appendChild(cont);
+            });
+          });
+        });
+      };
+
+      searchUser = () => {
+        document.getElementById("usersContainer").innerHTML = "";
+        username = document.getElementById("username").value;
+        const queryString =
+          "q=" + encodeURIComponent(username + " in:login type:user");
+        let theseoptions = {
+          headers: {
+            Accept: "application/vnd.github.v3+json",
+          },
+        };
+        fetch(
+          "https://api.github.com/search/users?q=" + username + "+in:%3Elogin",
+          theseoptions
+        ).then((response) => {
+          response.json().then((data) => {
+            console.log(data);
+            data.items.forEach((user) => {
+              let cont = document.createElement("div");
+              cont.className = "repoLabel";
+              let name = document.createTextNode(user.login + ": ");
+              cont.appendChild(name);
+              let button = document.createElement("button");
+              button.setAttribute("data-username", user.login);
+              button.appendChild(document.createTextNode("View"));
+              button.addEventListener("click", selectUser);
+              cont.appendChild(button);
+              let container = document.getElementById("usersContainer");
+              container.appendChild(cont);
+            });
+          });
+        });
+      };
+
+      document.getElementById("go").addEventListener("click", selectUser);
+    </script>
+
+
+
+  </body>
+</html>
